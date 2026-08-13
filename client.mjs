@@ -4648,10 +4648,11 @@ function renderLobbyPlayers(players = []) {
 }
 
 function socketUrl() {
+  const roomQuery = `?room=${encodeURIComponent(onlineRoom || 'STAR1')}`;
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  if (location.protocol === 'file:') return 'ws://127.0.0.1:8787';
-  if (location.port && location.port !== '8787') return `${protocol}//${location.hostname}:8787`;
-  return `${protocol}//${location.host}`;
+  if (location.protocol === 'file:') return `ws://127.0.0.1:8787/ws${roomQuery}`;
+  if (location.port && location.port !== '8787') return `${protocol}//${location.hostname}:8787/ws${roomQuery}`;
+  return `${protocol}//${location.host}/ws${roomQuery}`;
 }
 
 function connectOnline() {
