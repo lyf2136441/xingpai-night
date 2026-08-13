@@ -84,6 +84,19 @@ https://你的域名/
 
 公网联机不依赖手机和电脑处于同一个 Wi-Fi。所有玩家访问同一个公网域名，浏览器会通过 `wss://` 连接服务器房间；同一 Wi-Fi 只适用于本地测试。
 
+## Cloudflare Workers + Durable Objects 部署（不使用 Render）
+
+项目同时提供 `worker.mjs` 和 `wrangler.toml`，用于将每个房间放进一个 Durable Object。网页静态资源由 Workers Assets 提供，手机端 WebSocket 使用同一个 `workers.dev` 地址，因此不需要电脑开机，也不要求玩家处于同一 Wi-Fi。
+
+首次部署需要在 Cloudflare 控制台完成一次登录授权。电脑有 Node.js 时，在项目目录执行：
+
+```bash
+npx wrangler login
+npm run cloudflare:deploy
+```
+
+部署完成后，手机访问 Wrangler 输出的 `https://xingpai-night.<你的账号>.workers.dev/`。健康检查为 `/health`。Cloudflare 免费 Workers 账户的 Durable Objects 使用 SQLite 后端；本项目当前房间状态以在线内存为主，正式商业化仍应加入持久化账号、经济数据、限流和反作弊。
+
 访问 `http://127.0.0.1:8787/health` 可以检查服务、房间、玩家和内容库规模；当前内容库为 54 个事件、48 件宝物、48 个出生点、20 个 NPC、35 个案件、18 个会议议题和 24 个小游戏。
 
 `Dockerfile` 会同时复制 `content-db.json` 和 `assets/`，避免云端镜像启动后内容库或音乐资源缺失。
