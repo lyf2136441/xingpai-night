@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: star-card-night
+    env: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
