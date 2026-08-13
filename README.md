@@ -97,6 +97,20 @@ npm run cloudflare:deploy
 
 部署完成后，手机访问 Wrangler 输出的 `https://xingpai-night.<你的账号>.workers.dev/`。健康检查为 `/health`。Cloudflare 免费 Workers 账户的 Durable Objects 使用 SQLite 后端；本项目当前房间状态以在线内存为主，正式商业化仍应加入持久化账号、经济数据、限流和反作弊。
 
+## 国内普通网络访问：公网 IP 部署
+
+如果部分用户无法直连 `workers.dev`，可以部署到香港或中国大陆的 VPS。项目提供 `docker-compose.public-ip.yml`，不需要域名、不需要 Cloudflare、不需要 VPN，手机直接访问 `http://服务器公网IP/` 即可，WebSocket 联机也会通过同一个地址工作。
+
+服务器上执行：
+
+```bash
+git clone https://github.com/lyf2136441/xingpai-night.git
+cd xingpai-night
+docker compose -f docker-compose.public-ip.yml up -d --build
+```
+
+云服务器安全组放行 TCP `80`。这套 IP 访问方案适合先测试；正式上线再绑定域名并使用现有 `docker-compose.yml` + Caddy 自动 HTTPS。当前电脑没有 VPS 公网 IP、云厂商账号或 SSH 授权，因此无法替用户凭空创建服务器或生成真实 IP；购买/开通一台香港 VPS 后，只需提供公网 IP 和登录用户名（不要发送密码），即可继续完成部署指导。
+
 访问 `http://127.0.0.1:8787/health` 可以检查服务、房间、玩家和内容库规模；当前内容库为 54 个事件、48 件宝物、48 个出生点、20 个 NPC、35 个案件、18 个会议议题和 24 个小游戏。
 
 `Dockerfile` 会同时复制 `content-db.json` 和 `assets/`，避免云端镜像启动后内容库或音乐资源缺失。
