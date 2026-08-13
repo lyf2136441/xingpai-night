@@ -1,0 +1,14 @@
+{
+  "name": "star-card-night-prototype",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Original mobile 3D social survival game vertical slice with WebSocket rooms",
+  "scripts": {
+    "server": "node server.js",
+    "start": "node server.js",
+    "qa": "node qa-smoke.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
