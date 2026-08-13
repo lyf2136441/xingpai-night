@@ -24,3 +24,5 @@ render.yaml
 .env*
 启动游戏.cmd
 启动游戏.ps1
+Caddyfile.ip
+docker-compose.public-ip.yml
