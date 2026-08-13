@@ -6,7 +6,9 @@
   "scripts": {
     "server": "node server.js",
     "start": "node server.js",
-    "qa": "node qa-smoke.js"
+    "qa": "node qa-smoke.js",
+    "cloudflare:dev": "npx wrangler dev",
+    "cloudflare:deploy": "npx wrangler deploy"
   },
   "dependencies": {
     "ws": "^8.18.0"
