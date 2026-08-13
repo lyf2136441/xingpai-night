@@ -1,6 +1,7 @@
 .git/
 .gitignore
 .assetsignore
+.wrangler/
 _*/
 *.png
 *.jpg
@@ -21,3 +22,5 @@ docker-compose.yml
 Caddyfile
 render.yaml
 .env*
+启动游戏.cmd
+启动游戏.ps1
