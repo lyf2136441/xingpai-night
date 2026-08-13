@@ -1,0 +1,32 @@
+services:
+  game:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8787
+    expose:
+      - "8787"
+    networks:
+      - star-night
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile.ip:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - game
+    networks:
+      - star-night
+
+networks:
+  star-night:
+
+volumes:
+  caddy_data:
+  caddy_config:
