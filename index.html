@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#070c18">
+  <title>星牌夜场 · 3D 联机原型</title>
+  <style>
+    :root {
+      --bg: #070c18;
+       --panel: rgba(14, 27, 49, .88);
+      --panel-strong: rgba(10, 18, 36, .96);
+      --line: rgba(145, 180, 232, .28);
+      --text: #f4f7ff;
+       --muted: #b6c7e2;
+      --gold: #ffd369;
+      --cyan: #68e5ff;
+      --green: #92edb1;
+      --danger: #ff6c91;
+      --purple: #bc8cff;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+    button, input { font: inherit; }
+    button { color: var(--text); border: 1px solid rgba(145, 180, 232, .42); border-radius: 12px; padding: 10px 13px; background: rgba(26, 46, 79, .9); cursor: pointer; transition: transform .16s, border-color .16s, background .16s; }
+    button:hover { transform: translateY(-1px); border-color: var(--cyan); background: rgba(42, 76, 116, .98); }
+    button:disabled { opacity: .45; cursor: wait; transform: none; }
+    input { width: 100%; border: 1px solid var(--line); border-radius: 11px; padding: 11px; color: var(--text); background: rgba(3, 9, 20, .72); outline: none; }
+    input:focus { border-color: var(--cyan); }
+    #game { position: fixed; inset: 0; }
+    canvas { display: block; touch-action: none; contain: strict; }
+    #labels, .hud, #rightActions, #mobileControls { contain: layout paint; }
+    .glass { background: var(--panel); border: 1px solid var(--line); border-radius: 17px; box-shadow: 0 14px 42px rgba(0, 0, 0, .28); backdrop-filter: blur(13px); }
+    .hud { position: fixed; z-index: 5; pointer-events: none; }
+    #topLeft { top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); width: min(430px, calc(100vw - 28px)); }
+    #titleCard { padding: 14px 17px; }
+    #titleCard .eyebrow, .eyebrow { color: var(--cyan); font-size: 11px; letter-spacing: .16em; }
+    #titleCard h1 { margin: 5px 0 4px; font-size: 25px; letter-spacing: .06em; }
+    #titleCard p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    #statusCard { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 1px; overflow: hidden; margin-top: 9px; padding: 0; background: rgba(9, 17, 33, .9); }
+    .stat { min-width: 0; padding: 10px 12px; background: rgba(16, 29, 53, .78); }
+    .stat span { display: block; color: var(--muted); font-size: 11px; }
+    .stat strong { display: block; margin-top: 3px; color: var(--gold); font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+     .stat strong.green { color: var(--green); }
+     .stat strong.cyan { color: var(--cyan); }
+     #handHud { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 9px; padding: 9px 12px; border: 1px solid rgba(255,211,105,.38); border-radius: 13px; background: linear-gradient(135deg, rgba(49,34,48,.9), rgba(19,31,56,.88)); }
+     #handHud .handHudTitle { color: var(--gold); font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
+     #handHud .handHudCards { color: #fff4c2; font: 700 15px/1.1 Consolas, monospace; white-space: nowrap; }
+     #handHud .handHudCount { color: var(--muted); font-size: 10px; white-space: nowrap; }
+    #instructions { right: 18px; top: 18px; padding: 12px 15px; color: var(--muted); font-size: 12px; line-height: 1.7; text-align: right; }
+    #instructions b { color: var(--text); }
+    #cameraHelp { position: fixed; z-index: 6; left: 50%; bottom: 18px; transform: translateX(-50%); padding: 7px 12px; border: 1px solid rgba(104,229,255,.28); border-radius: 999px; color: var(--muted); background: rgba(5,12,24,.68); font-size: 11px; pointer-events: none; }
+    #rightActions { position: fixed; z-index: 7; top: 110px; right: 18px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; max-width: 330px; pointer-events: auto; }
+    #rightActions button { padding: 8px 11px; background: rgba(9, 19, 37, .88); font-size: 12px; }
+    #onlineStatus { position: fixed; z-index: 7; top: 164px; right: 18px; padding: 6px 10px; border: 1px solid rgba(145, 180, 232, .3); border-radius: 999px; color: var(--muted); background: rgba(7, 13, 27, .74); font-size: 11px; }
+    #onlineStatus.connected { color: var(--green); border-color: rgba(146, 237, 177, .52); }
+    #roundHud { position: fixed; z-index: 7; top: 18px; left: 50%; transform: translateX(-50%); width: min(250px, calc(100vw - 310px)); padding: 9px 13px; text-align: center; }
+    #roundHud .roundEyebrow { color: var(--gold); font-size: 10px; letter-spacing: .14em; }
+    #roundCountdown { display: block; margin: 1px 0; color: #fff5ca; font: 700 24px/1.1 Consolas, monospace; letter-spacing: .08em; text-shadow: 0 0 16px rgba(255,211,105,.55); }
+    #roundCountdown.danger { color: var(--danger); animation: countdownPulse 1s ease-in-out infinite; }
+    #cardInventory { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    #cardInventory .rock { color: #b7c8df; } #cardInventory .paper { color: var(--cyan); } #cardInventory .scissors { color: #ff9eb5; }
+    @keyframes countdownPulse { 50% { transform: scale(1.06); text-shadow: 0 0 23px rgba(255,108,145,.78); } }
+    #scoreboard { position: fixed; z-index: 7; top: 204px; right: 18px; width: 190px; padding: 10px 11px; }
+    #scoreboard h3 { margin: 0 0 7px; color: var(--gold); font-size: 12px; }
+     #scoreboardList { display: grid; gap: 4px; max-height: 230px; overflow: auto; }
+      #populationHud { position: fixed; z-index: 8; top: 492px; right: 18px; display: flex; gap: 6px; padding: 7px 9px; border: 1px solid rgba(104,229,255,.3); border-radius: 12px; color: var(--muted); background: rgba(7,14,28,.84); font-size: 10px; }
+     #populationHud b { color: var(--text); font: 700 13px Consolas, monospace; }
+      #mobileHand { display: none; }
+      #handHud { pointer-events: none; }
+    .scoreRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+    .scoreRow.me { color: #fff; } .scoreRow b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+    .scoreStars { color: var(--gold); white-space: nowrap; letter-spacing: 1px; }
+    #zoneBanner { position: fixed; z-index: 6; top: 20px; left: 50%; transform: translateX(-50%) translateY(-12px); opacity: 0; padding: 8px 15px; border: 1px solid rgba(104, 229, 255, .45); border-radius: 999px; color: var(--cyan); background: rgba(7, 14, 28, .84); transition: opacity .25s, transform .25s; pointer-events: none; }
+    #zoneBanner.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      #eventCard { position: fixed; z-index: 6; top: 250px; left: 18px; width: min(280px, calc(100vw - 36px)); padding: 10px 12px; border-left: 3px solid var(--gold); opacity: .96; }
+     #eventCard .eventMeta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; color: var(--cyan); font-size: 9px; letter-spacing: .12em; }
+     #eventCard .eventMeta b { color: var(--gold); font: 700 10px Consolas, monospace; letter-spacing: 0; }
+     #eventCard .eventTitle { color: var(--gold); font-size: 12px; font-weight: 700; }
+    #eventCard .eventText { margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    #activityFeed { position: fixed; z-index: 6; right: 18px; bottom: 18px; width: min(265px, calc(100vw - 36px)); padding: 10px 12px; color: var(--muted); font-size: 11px; line-height: 1.55; pointer-events: none; }
+     #activityFeed div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+     #missionPanel { position: fixed; z-index: 7; left: 18px; bottom: 182px; width: min(300px, calc(100vw - 36px)); padding: 12px 13px; border-color: rgba(104,229,255,.34); background: linear-gradient(135deg, rgba(15,34,59,.94), rgba(13,22,43,.9)); pointer-events: none; }
+     #missionPanel .missionTop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+     #missionPanel .missionKicker { color: var(--cyan); font-size: 10px; letter-spacing: .15em; }
+     #phaseBadge { padding: 3px 7px; border: 1px solid rgba(255,211,105,.48); border-radius: 999px; color: var(--gold); background: rgba(255,211,105,.1); font-size: 10px; white-space: nowrap; }
+     #phaseBadge.prison { color: #ffc1cd; border-color: rgba(255,108,145,.7); background: rgba(255,108,145,.11); }
+     #phaseBadge.duel { color: #fff0aa; border-color: rgba(255,211,105,.72); background: rgba(255,211,105,.14); }
+     #phaseBadge.safe { color: var(--green); border-color: rgba(146,237,177,.62); background: rgba(146,237,177,.11); }
+     #missionTitle { margin: 7px 0 3px; color: var(--text); font-size: 14px; }
+     #missionHint { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+     .missionTarget { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(145,180,232,.18); color: var(--muted); font-size: 10px; }
+     .missionTarget strong { overflow: hidden; color: #e9f5ff; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+     .missionMetrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
+     .missionMetric { padding: 7px 8px; border-radius: 9px; background: rgba(33,59,94,.54); }
+     .missionMetric span, .missionMetric b { display: block; }
+     .missionMetric span { color: var(--muted); font-size: 10px; }
+     .missionMetric b { margin-top: 2px; color: var(--gold); font: 700 12px Consolas, monospace; }
+     #missionBar { height: 4px; overflow: hidden; margin-top: 9px; border-radius: 999px; background: rgba(145,180,232,.18); }
+     #missionBarFill { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--purple), var(--gold)); transition: width .3s ease; }
+     #miniMapWrap { position: fixed; z-index: 7; bottom: 18px; left: 18px; width: 148px; height: 148px; padding: 7px; border: 1px solid rgba(104, 229, 255, .42); border-radius: 18px; background: rgba(5, 12, 24, .82); box-shadow: 0 12px 32px rgba(0,0,0,.3), 0 0 0 1px rgba(183,123,255,.1) inset; cursor: pointer; pointer-events: auto; }
+     #miniMap { display: block; width: 134px; height: 134px; border-radius: 12px; }
+     #miniMapWrap::after { content: '点击展开详细地图'; position: absolute; left: 10px; right: 10px; bottom: 7px; padding: 3px 5px; border-radius: 6px; color: rgba(233,245,255,.76); background: rgba(4,10,21,.7); font-size: 9px; text-align: center; pointer-events: none; }
+     #bigMapModal { z-index: 32; }
+     #bigMapBox { width: min(920px, 96vw); max-height: calc(100vh - 32px); }
+     #bigMapCanvas { display: block; width: 100%; height: min(72vh, 690px); min-height: 320px; border: 1px solid rgba(104,229,255,.28); border-radius: 16px; background: #071224; image-rendering: auto; }
+     #bigMapLegend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; color: var(--muted); font-size: 11px; }
+     #bigMapLegend span { display: inline-flex; align-items: center; gap: 5px; }
+     #bigMapLegend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px currentColor; }
+     #bigMapLegend .building { border-radius: 2px; background: #6c83a8; }
+     #bigMapLegend .zone { background: var(--purple); }
+     #bigMapLegend .table { background: var(--gold); }
+     #bigMapLegend .loot { background: #fff0a8; }
+     #bigMapLegend .player { background: var(--cyan); }
+    #loadingScreen { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 38%, #173a59 0, #070c18 58%); transition: opacity .45s, visibility .45s; }
+    #loadingScreen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    #loadingBox { width: min(360px, calc(100vw - 40px)); padding: 25px; text-align: center; }
+    #loadingBox h2 { margin: 5px 0; letter-spacing: .08em; }
+    #loadingBox p { margin: 8px 0 16px; color: var(--muted); font-size: 12px; }
+    #loadingBar { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(145,180,232,.18); }
+    #loadingBar span { display: block; width: 20%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--purple), var(--gold)); animation: loading 1.2s ease-in-out infinite; }
+    #startScreen { z-index: 48; background: radial-gradient(circle at 50% 32%, rgba(76,35,93,.72), rgba(2,6,15,.92) 62%); }
+    #startBox { width: min(480px, 100%); text-align: center; }
+    #startBox h2 { margin: 7px 0 10px; font-size: 29px; letter-spacing: .08em; }
+    #startModeActions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+    #startModeActions button { min-height: 64px; color: var(--gold); border-color: rgba(255,211,105,.58); background: linear-gradient(135deg, rgba(68,42,72,.92), rgba(20,35,64,.92)); }
+    #startModeActions button:last-child { color: var(--cyan); border-color: rgba(104,229,255,.58); }
+    #startContinue { min-height: 20px; margin-top: 13px; }
+    @keyframes loading { 0% { transform: translateX(-120%); } 100% { transform: translateX(620%); } }
+    #interaction { left: 50%; bottom: 22px; transform: translateX(-50%); min-width: 270px; max-width: calc(100vw - 32px); padding: 10px 17px; text-align: center; color: var(--muted); font-size: 13px; opacity: 0; transition: opacity .2s; }
+    #interaction.show { opacity: 1; }
+    #interaction strong { color: var(--gold); }
+    #labels { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+    .worldLabel { position: absolute; transform: translate(-50%, -100%); padding: 4px 8px; border: 1px solid rgba(145, 180, 232, .42); border-radius: 8px; color: #fff; background: rgba(5, 11, 23, .78); white-space: nowrap; font-size: 11px; text-shadow: 0 1px 3px #000; }
+    .worldLabel.venueLabel { padding: 6px 12px; border-color: rgba(255, 211, 105, .72); background: linear-gradient(180deg, rgba(23, 32, 55, .94), rgba(5, 11, 23, .88)); box-shadow: 0 0 18px rgba(104, 229, 255, .18); font-size: 12px; font-weight: 700; }
+    .worldLabel.entranceLabel { border-color: rgba(104, 229, 255, .4); color: var(--cyan); background: rgba(5, 11, 23, .68); font-size: 9px; opacity: .84; }
+    .worldLabel.zoneLabel { transform: translate(-50%, -110%); }
+     .worldLabel .miniStars { margin-left: 5px; color: var(--gold); letter-spacing: 1px; }
+     .worldLabel .roleTag { color: var(--cyan); font-size: 9px; font-weight: 400; }
+    .worldLabel.zoneLabel { padding: 6px 10px; border-radius: 999px; color: var(--cyan); background: rgba(5, 12, 24, .65); font-weight: 700; }
+    #toast { position: fixed; z-index: 30; top: 19px; left: 50%; transform: translateX(-50%) translateY(-18px); opacity: 0; max-width: calc(100vw - 32px); padding: 9px 16px; border: 1px solid var(--gold); border-radius: 999px; color: var(--gold); background: rgba(7, 13, 27, .95); font-size: 13px; transition: opacity .25s, transform .25s; pointer-events: none; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .modal, #challenge, #gameOver { position: fixed; z-index: 20; inset: 0; display: none; place-items: center; padding: 16px; background: rgba(2, 6, 15, .7); backdrop-filter: blur(8px); }
+    .modal.open, #challenge.open, #gameOver.open { display: grid; }
+    .modalBox, #challengeBox, #gameOver .glass { width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 23px; }
+    .modalTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .modalBox h2, #challengeBox h2 { margin: 5px 0 4px; font-size: 24px; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .iconBtn { width: 33px; height: 33px; padding: 0; border-radius: 50%; background: transparent; color: var(--muted); }
+    .wallet { margin-top: 12px; color: var(--gold); font-size: 14px; }
+    .shopGrid, .taskGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+    .shopItem, .taskItem { padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: rgba(19, 35, 62, .67); }
+    .shopItem h3, .taskItem h3 { margin: 0 0 5px; font-size: 14px; }
+    .shopItem p, .taskItem p { min-height: 42px; margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .price { display: block; margin-bottom: 8px; color: var(--gold); font-size: 12px; }
+    .shopItem button { width: 100%; padding: 8px; font-size: 12px; }
+    .shopItem button.owned { color: var(--green); border-color: rgba(146, 237, 177, .5); }
+    .taskItem progress { width: 100%; height: 6px; accent-color: var(--cyan); }
+    .taskItem small { display: block; margin-top: 7px; color: var(--muted); }
+    .formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 16px 0 9px; }
+    #lobbyPlayers { display: grid; gap: 7px; margin-top: 13px; }
+    .lobbyPlayer { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px; border-radius: 10px; color: var(--muted); background: rgba(17, 32, 57, .7); font-size: 12px; }
+    .lobbyPlayer b { color: var(--text); }
+    #onlineLog, #loanLog, #taskLog { min-height: 21px; margin-top: 10px; color: var(--cyan); font-size: 12px; }
+    #riskNotice { margin-top: 11px; padding: 9px 11px; border-left: 3px solid var(--danger); border-radius: 7px; color: #ffc0cb; background: rgba(77, 19, 39, .26); font-size: 11px; line-height: 1.5; }
+     #challenge { z-index: 22; }
+     #tableConsent { z-index: 23; }
+     #tableConsentBox { width: min(390px, 100%); text-align: center; }
+     #tableConsentBox h2 { margin: 7px 0; font-size: 24px; }
+     #tableConsentName { color: var(--gold); font-size: 14px; }
+     #tableConsentStatus { min-height: 42px; margin: 13px 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+     #tableConsentActions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+     #tableConsentAgree { color: var(--green); border-color: rgba(146,237,177,.55); }
+     #tableConsentReject { color: #ff9eb5; border-color: rgba(255,108,145,.5); }
+     #meetingModal { z-index: 24; }
+     #meetingBox { width: min(620px, 100%); }
+     #meetingBox h2 { margin: 5px 0; font-size: 24px; }
+     #meetingRoomName, #meetingProgress { color: var(--cyan); font-size: 11px; }
+     #meetingIntro { margin: 10px 0; padding: 10px 12px; border-left: 3px solid var(--purple); color: var(--muted); background: rgba(38,30,74,.4); font-size: 12px; line-height: 1.55; }
+     #meetingClueTitle { margin-top: 14px; color: var(--gold); font-size: 15px; }
+     #meetingClueText { color: var(--text); font-size: 12px; line-height: 1.6; }
+     #meetingOptions { display: grid; gap: 8px; margin-top: 12px; }
+     #meetingOptions button { text-align: left; font-size: 12px; }
+     #meetingResult { min-height: 36px; margin-top: 12px; color: var(--gold); font-size: 12px; line-height: 1.5; }
+     #meetingVoiceStatus { color: var(--muted); font-size: 11px; }
+    #meetingVoiceRow { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    #turtleAnswerInput { width: 100%; min-height: 120px; resize: vertical; margin-top: 10px; padding: 11px; border: 1px solid var(--line); border-radius: 11px; color: var(--text); background: rgba(3,9,20,.72); outline: none; line-height: 1.55; }
+    #turtleAnswerInput:focus { border-color: var(--cyan); }
+    .turtleHint { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; }
+    #parkGameModal { z-index: 25; }
+    #parkGameBox { width: min(760px, 100%); text-align: center; }
+    #parkGameBoard { display: grid; grid-template-columns: repeat(15, minmax(16px, 1fr)); gap: 2px; width: min(92vw, 430px); aspect-ratio: 1; margin: 14px auto 10px; padding: 10px; border: 1px solid rgba(255, 211, 105, .46); border-radius: 12px; background: linear-gradient(135deg, #9e7540, #5e3d2b); box-shadow: inset 0 0 24px rgba(20, 8, 4, .5), 0 10px 32px rgba(0, 0, 0, .3); }
+    .gomokuCell { position: relative; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: rgba(244, 203, 123, .28); box-shadow: none; }
+    .gomokuCell::before, .gomokuCell::after { position: absolute; content: ''; background: rgba(34, 19, 13, .7); pointer-events: none; }
+    .gomokuCell::before { top: 50%; right: -1px; left: -1px; height: 1px; transform: translateY(-50%); }
+    .gomokuCell::after { top: -1px; bottom: -1px; left: 50%; width: 1px; transform: translateX(-50%); }
+    .gomokuCell.black, .gomokuCell.white { z-index: 1; border: 1px solid rgba(255, 255, 255, .22); box-shadow: inset -2px -3px 4px rgba(0, 0, 0, .38), 0 2px 5px rgba(0, 0, 0, .35); }
+    .gomokuCell.black { background: radial-gradient(circle at 35% 30%, #64718c, #151b2c 58%, #05070c); }
+    .gomokuCell.white { background: radial-gradient(circle at 35% 30%, #fffdf0, #c8d2e2 62%, #697385); }
+    .gomokuCell:disabled { opacity: 1; cursor: default; transform: none; }
+    #parkGameModeRow { margin-top: 12px; }
+    .parkModeButton { color: var(--gold); border-color: rgba(255, 211, 105, .6); }
+    #parkGameBox h2 { margin: 5px 0; font-size: 25px; }
+    #parkGameDescription, #parkGameResult { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    #parkGameResult { min-height: 42px; margin: 16px 0 8px; color: var(--gold); }
+    #parkGameAction { width: 100%; color: var(--gold); border-color: rgba(255,211,105,.65); }
+    .cardControls, .cardStakeRow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 8px 0; }
+    .cardControls button, .cardStakeRow button { min-width: 112px; color: var(--gold); border-color: rgba(255,211,105,.58); }
+    .cardHint { display: block; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .parkChoices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .parkChoices button { padding: 10px 6px; }
+    #parkMemoryInput { width: 100%; margin: 12px 0 8px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--text); background: rgba(3,9,20,.72); text-align: center; outline: none; }
+    #parkMemorySubmit { width: 100%; }
+    #parkGameCanvas { display: none; width: min(94vw, 700px); height: min(54vh, 430px); min-height: 250px; margin: 12px auto; border: 1px solid rgba(104,229,255,.42); border-radius: 16px; background: radial-gradient(circle at 50% 35%, rgba(36,66,101,.78), rgba(4,10,23,.96)); box-shadow: inset 0 0 28px rgba(0,0,0,.55), 0 12px 36px rgba(0,0,0,.34); touch-action: none; image-rendering: auto; }
+    #parkGameControls { display: none; justify-content: center; align-items: center; gap: 7px; margin: 8px auto 2px; }
+    #parkGameControls.mazeControls { display: grid; grid-template-columns: repeat(3, 54px); grid-template-rows: repeat(2, 46px); width: 170px; }
+    #parkGameControls button { min-height: 42px; padding: 6px 10px; color: var(--cyan); border-color: rgba(104,229,255,.46); touch-action: manipulation; }
+    #parkGameControls [data-maze-dir="up"] { grid-column: 2; grid-row: 1; }
+    #parkGameControls [data-maze-dir="left"] { grid-column: 1; grid-row: 2; }
+    #parkGameControls [data-maze-dir="down"] { grid-column: 2; grid-row: 2; }
+    #parkGameControls [data-maze-dir="right"] { grid-column: 3; grid-row: 2; }
+    .parkGameInstruction { color: var(--muted); font-size: 11px; min-height: 18px; }
+    .clockTick { text-shadow: 0 0 8px rgba(255,211,105,.95), 0 0 20px rgba(255,85,127,.7); }
+    #challengeBox { max-width: 470px; text-align: center; }
+    #challengeBox .eyebrow { color: var(--cyan); }
+    #challengeBox h2 { font-size: 26px; }
+    #challengeBox > p { margin: 5px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    #tableStatus { min-height: 22px; color: var(--gold); font-size: 12px; }
+    #rpsButtons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    #rpsButtons button { padding: 12px 8px; }
+    #rpsButtons .emoji { display: block; margin-bottom: 4px; font-size: 29px; }
+    #challengeResult { min-height: 28px; margin-top: 13px; font-size: 15px; font-weight: 700; }
+    #challengeResult.win { color: var(--gold); }
+    #challengeResult.lose { color: var(--danger); }
+    #challengeResult.draw { color: var(--cyan); }
+    #relationshipActions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 13px; }
+    #allyBtn { color: var(--green); border-color: rgba(146, 237, 177, .5); }
+    #betrayBtn { color: #ff9eb5; border-color: rgba(255, 108, 145, .5); }
+    #tradeActions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+    #tradeBtn { color: var(--cyan); border-color: rgba(104,229,255,.5); }
+    #tradePanel, #tradeOfferPanel { margin-top: 10px; padding: 10px; border: 1px solid rgba(104,229,255,.32); border-radius: 12px; background: rgba(8,22,40,.72); text-align: left; }
+    #tradePanel .tradeHint, #tradeOfferPanel .tradeHint { color: var(--muted); font-size: 11px; line-height: 1.45; }
+    #tradeInputs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
+    #tradeInputs input { padding: 8px; font-size: 11px; }
+    #sendTradeBtn, #acceptTradeBtn, #rejectTradeBtn { margin-top: 7px; padding: 8px; font-size: 11px; }
+    #duelCountdown { margin: 5px 0 8px; color: var(--danger); font: 700 13px Consolas, monospace; }
+    #duelChatPanel { display: none; margin-top: 13px; text-align: left; }
+    #duelChatLog { height: 88px; overflow: auto; padding: 8px; border: 1px solid rgba(145,180,232,.22); border-radius: 10px; background: rgba(3,9,19,.64); color: var(--muted); font-size: 11px; line-height: 1.55; }
+    #duelChatLog .mine { color: var(--cyan); } #duelChatLog .theirs { color: #ffd9a0; }
+    #duelChatComposer { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 6px; }
+    #duelChatComposer input { padding: 8px; font-size: 11px; }
+    #duelChatComposer button, #voiceBtn { padding: 8px 9px; font-size: 11px; }
+    #voiceRow { display: flex; align-items: center; gap: 7px; margin-top: 6px; color: var(--muted); font-size: 10px; }
+    #voiceStatus { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #closeChallenge { margin-top: 13px; color: var(--muted); background: transparent; }
+    #gameOver { z-index: 25; }
+    #gameOver .glass { max-width: 420px; text-align: center; }
+    #gameOver h2 { margin: 0 0 7px; }
+    #gameOver p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    #prisonOverlay { position: fixed; z-index: 24; top: max(16px, env(safe-area-inset-top)); left: 50%; display: none; transform: translateX(-50%); max-width: calc(100vw - 28px); padding: 9px 13px; border: 1px solid rgba(255, 108, 145, .72); border-radius: 999px; color: #ffc1cd; background: rgba(52, 9, 25, .93); font-size: 12px; white-space: nowrap; }
+    #prisonOverlay.open { display: flex; align-items: center; gap: 9px; }
+    #prisonRescueBtn { padding: 6px 9px; color: var(--gold); border-color: rgba(255, 211, 105, .66); font-size: 11px; }
+    #safeExitBtn { color: var(--green); border-color: rgba(146, 237, 177, .5); }
+    #safeExitBtn.ready { animation: countdownPulse 1.3s ease-in-out infinite; }
+    #treasureInventory { margin-top: 10px; padding: 10px 11px; border: 1px solid rgba(255,211,105,.28); border-radius: 12px; color: var(--muted); background: rgba(13,25,45,.62); font-size: 11px; line-height: 1.55; }
+    #treasureInventory b { color: var(--gold); }
+    #treasureInventory .treasureLine { display: flex; justify-content: space-between; gap: 8px; }
+    #treasureInventory .treasureValue { color: var(--cyan); white-space: nowrap; }
+    #rescueList .taskItem { min-height: 116px; }
+     #mobileControls { position: fixed; z-index: 12; right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); left: 14px; display: none; align-items: flex-end; justify-content: space-between; pointer-events: none; }
+     #joystick { position: relative; width: 108px; height: 108px; border: 1px solid rgba(194, 219, 255, .55); border-radius: 50%; background: radial-gradient(circle, rgba(32,75,111,.54), rgba(7,15,30,.76)); box-shadow: 0 8px 25px rgba(0,0,0,.35), inset 0 0 22px rgba(104,229,255,.12); pointer-events: auto; touch-action: none; }
+     #joystick::after { position: absolute; right: 0; bottom: 8px; left: 0; color: rgba(225,242,255,.68); content: '移动'; font-size: 10px; text-align: center; pointer-events: none; }
+     .joystickRing { position: absolute; inset: 17px; border: 1px dashed rgba(194,219,255,.28); border-radius: 50%; pointer-events: none; }
+     #stick { position: absolute; top: 50%; left: 50%; width: 42px; height: 42px; margin: 0; border: 2px solid rgba(226,249,255,.72); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #b9f5ff, #3dbedb 55%, #176b95); box-shadow: 0 0 22px rgba(104,229,255,.5); transform: translate(-50%, -50%); transition: transform .08s ease-out; pointer-events: none; }
+     #mobilePad { display: flex; align-items: flex-end; gap: 8px; pointer-events: none; }
+     #mobileCamera, #mobileAction, #mobileSprint, #mobileJump { padding: 0; border-radius: 17px; pointer-events: auto; color: var(--text); background: rgba(10,24,45,.9); }
+     #mobileCamera { width: 62px; height: 48px; color: var(--cyan); border-color: rgba(104,229,255,.65); }
+     #mobileAction { width: 78px; height: 64px; color: var(--gold); border-color: rgba(255,211,105,.78); background: rgba(255,211,105,.18); }
+     #mobileSprint { width: 62px; height: 48px; color: #ffb6ca; border-color: rgba(255,108,145,.7); background: rgba(80,18,43,.86); touch-action: none; }
+     #mobileSprint.active { color: #fff; border-color: #ff7195; background: rgba(255,73,122,.42); box-shadow: 0 0 20px rgba(255,73,122,.38); }
+     #mobileJump { width: 62px; height: 48px; color: #9ef2b8; border-color: rgba(158,242,184,.68); }
+     #moreBtn { display: none; }
+     .mobile-device #mobileControls { display: flex; }
+     @media (max-width: 700px), (hover: none) and (pointer: coarse) {
+       #instructions, #eventCard, #activityFeed, #cameraHelp { display: none; }
+       .worldLabel { padding: 2px 5px; font-size: 9px; opacity: .82; }
+       #topLeft { top: max(8px, env(safe-area-inset-top)); left: 10px; width: min(185px, calc(100vw - 175px)); }
+       #titleCard { padding: 8px 10px; border-radius: 13px; }
+       #titleCard .eyebrow, #titleCard p { display: none; }
+       #titleCard h1 { margin: 0; font-size: 19px; letter-spacing: .04em; }
+       #statusCard { grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 6px; border-radius: 13px; }
+       .stat { padding: 6px 8px; }
+       .stat span { font-size: 9px; }
+       .stat strong { margin-top: 1px; font-size: 14px; }
+       #roundHud { top: max(8px, env(safe-area-inset-top)); right: 10px; left: auto; width: 140px; transform: none; padding: 7px 8px; border-radius: 13px; }
+       #roundHud .roundEyebrow { font-size: 8px; }
+       #roundCountdown { font-size: 20px; }
+       #cardInventory { font-size: 9px; }
+       #rightActions { top: 178px; right: 10px; left: auto; display: flex; width: 106px; flex-direction: column; gap: 4px; max-width: none; padding: 6px; border: 1px solid rgba(104,229,255,.24); border-radius: 13px; background: rgba(5,12,24,.72); }
+       #rightActions button { width: 106px; min-width: 0; overflow: hidden; padding: 6px 4px; border-radius: 9px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+        #rightActions .mobileSecondary { display: none; }
+        #rightActions.expanded { top: 178px; bottom: 190px; max-height: none; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; align-content: flex-start; }
+        #rightActions.expanded .mobileSecondary { display: block; }
+        #rightActions.expanded ~ #missionPanel { bottom: 175px; opacity: .18; }
+        #rightActions.expanded ~ #miniMapWrap, #rightActions.expanded ~ #populationHud { opacity: .16; pointer-events: none; }
+       #cameraBtn { display: none; }
+     #moreBtn { display: block; color: var(--cyan); border-color: rgba(104,229,255,.6); }
+      #musicStatus { margin-top: 8px; color: var(--muted); font-size: 11px; }
+      #musicFileBtn { margin-top: 8px; color: var(--gold); border-color: rgba(255,211,105,.5); }
+         #onlineStatus { top: 82px; right: 10px; left: auto; padding: 5px 8px; font-size: 9px; }
+         #missionPanel { top: auto; right: auto; bottom: 175px; left: 10px; width: 155px; padding: 7px 9px; border-radius: 12px; }
+       #missionPanel .missionKicker { font-size: 8px; }
+       #phaseBadge { padding: 2px 5px; font-size: 8px; }
+       #missionTitle { margin: 4px 0 1px; font-size: 11px; line-height: 1.35; }
+       #missionHint { display: none; }
+       .missionTarget { margin-top: 4px; padding-top: 4px; font-size: 9px; }
+       .missionTarget strong { max-width: 65%; }
+       .missionMetrics, #missionBar { display: none; }
+       .missionMetric { padding: 5px; }
+       .missionMetric span { font-size: 8px; }
+       .missionMetric b { font-size: 10px; }
+      #scoreboard { display: none; }
+         #populationHud { top: 110px; right: 10px; font-size: 9px; }
+        #handHud { margin-top: 6px; padding: 7px 8px; gap: 4px; border-radius: 10px; }
+        #handHud .handHudTitle { font-size: 8px; }
+        #handHud .handHudCards { font-size: 12px; }
+        #handHud .handHudCount { font-size: 8px; }
+       #miniMapWrap { right: 10px; bottom: 174px; left: auto; width: 104px; height: 104px; padding: 5px; border-radius: 14px; }
+       #miniMap { width: 92px; height: 92px; }
+       #miniMapWrap::after { left: 5px; right: 5px; bottom: 4px; padding: 2px; font-size: 7px; }
+       #bigMapBox { width: calc(100vw - 18px); padding: 13px; }
+       #bigMapCanvas { height: min(68vh, 560px); min-height: 280px; }
+       #bigMapLegend { gap: 6px 9px; font-size: 9px; }
+       #interaction { right: 10px; bottom: 128px; left: 10px; min-width: 0; max-width: none; padding: 8px 10px; border-radius: 11px; font-size: 11px; }
+       #mobileControls { right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); left: 14px; }
+       #mobilePad { gap: 6px; }
+       #mobileCamera, #mobileSprint, #mobileJump { width: 56px; height: 46px; font-size: 11px; }
+       #mobileAction { width: 74px; height: 60px; font-size: 12px; }
+       #statusCard { grid-template-columns: 1fr 1fr; }
+       .shopGrid, .taskGrid { grid-template-columns: 1fr; }
+      .modalBox, #challengeBox, #gameOver .glass { padding: 18px; }
+      #startModeActions { grid-template-columns: 1fr; }
+      }
+      .performance-mode .glass { backdrop-filter: none; box-shadow: 0 8px 22px rgba(0, 0, 0, .22); }
+      @media (max-width: 700px), (hover: none) and (pointer: coarse) {
+        #rightActions.expanded ~ #miniMapWrap, #rightActions.expanded ~ #populationHud { opacity: .16; }
+      }
+      .performance-mode #loadingScreen, .performance-mode #toast { backdrop-filter: none; }
+     @media (max-width: 370px) {
+       #topLeft { width: 185px; }
+       #roundHud { width: 132px; }
+       #rightActions button { font-size: 9px; }
+       #missionTitle { font-size: 11px; }
+       #scoreboardList { max-height: 106px; }
+     }
+  </style>
+</head>
+<body>
+  <div id="loadingScreen"><div id="loadingBox" class="glass"><div class="eyebrow">ORIGINAL 3D SOCIAL SURVIVAL</div><h2>星牌夜场</h2><p>正在点亮夜场、部署裁判和召集人机玩家…</p><div id="loadingBar"><span></span></div></div></div>
+  <div id="startScreen" class="modal open"><div id="startBox" class="modalBox glass"><div class="eyebrow">NIGHT VENUE · START</div><h2>进入星牌夜场</h2><p class="hint">选择本次体验模式。你的单机进度会自动保存在本机；联机模式用于和其他设备进入同一房间。</p><div id="startModeActions"><button id="startSingleBtn">单机探索</button><button id="startOnlineBtn">联机大厅</button></div><div id="startContinue" class="hint"></div></div></div>
+  <div id="game"></div>
+  <div id="labels"></div>
+  <div id="topLeft" class="hud">
+    <div id="titleCard" class="glass">
+      <div class="eyebrow">ORIGINAL 3D SOCIAL SURVIVAL</div>
+      <h1>星牌夜场</h1>
+      <p>在一座开放夜场里寻找赌桌、结盟和资源。每次石头剪刀布只改变一颗星，星星归零就会被裁判押入无限监狱。</p>
+    </div>
+     <div id="statusCard" class="glass">
+      <div class="stat"><span>我的星星</span><strong id="playerStars">★★★</strong></div>
+      <div class="stat"><span>虚拟金币</span><strong id="playerCoins">120</strong></div>
+      <div class="stat"><span>状态</span><strong id="playerStatus" class="green">自由</strong></div>
+      <div class="stat"><span>宝物估值</span><strong id="playerLoot" class="cyan">120</strong></div>
+     </div>
+     <div id="handHud"><span class="handHudTitle">我的手牌</span><span id="handHudCards" class="handHudCards">✊2  ✋2  ✌️2</span><span id="handHudCount" class="handHudCount">6 张</span></div>
+  </div>
+  <div id="instructions" class="hud glass"><b>电脑</b> W/S 前后 · A/D 横移 · 空格跳跃<br><b>视角</b> 点击“视角”循环，明确显示第一人称<br><b>玩法</b> 走到设施旁按行动入座；电梯和瞭望台在地图南侧</div>
+  <div id="rightActions">
+    <button id="restartGameBtn">重新开局</button>
+    <button id="shopBtn">商店</button>
+    <button id="loanBtn" class="mobileSecondary">借贷</button>
+    <button id="taskBtn">任务</button>
+    <button id="lobbyBtn">联机大厅</button>
+    <button id="soundBtn">声音：开</button>
+    <button id="musicBtn" class="mobileSecondary">音乐：开</button>
+    <button id="dayNightBtn" class="mobileSecondary">昼夜：夜晚</button>
+    <button id="cameraBtn">视角：跟随</button>
+    <button id="firstPersonBtn" class="mobileSecondary">第一人称</button>
+    <button id="rescueBtn" class="mobileSecondary">救援</button>
+    <button id="safeExitBtn" class="mobileSecondary" disabled>安全离场 · 需无牌+3星</button>
+    <button id="signInBtn" class="mobileSecondary">每日签到</button>
+    <button id="moreBtn">更多</button>
+  </div>
+  <div id="onlineStatus">● 单机模式</div>
+  <div id="roundHud" class="glass"><div class="roundEyebrow">ANCIENT CLOCK · ROUND</div><strong id="roundCountdown">30:00</strong><div id="cardInventory"><span class="rock">✊ 0</span> · <span class="paper">✋ 0</span> · <span class="scissors">✌️ 0</span></div></div>
+  <div id="scoreboard" class="glass"><h3>玩家状态 · 不显示他人星星</h3><div id="scoreboardList"></div></div>
+  <div id="populationHud"><span>场内 <b id="remainingCount">8</b></span><span>淘汰 <b id="eliminatedCount">0</b></span><span>总计 <b id="populationTotal">8</b></span></div>
+  <div id="mobileHand">手牌：读取中</div>
+  <div id="cameraHelp">拖动画面旋转视角 · 滚轮缩放 · V 切换预设</div>
+  <div id="zoneBanner"></div>
+  <div id="eventCard" class="glass"><div class="eventMeta"><span>LIVE DIRECTIVE</span><b id="eventTimerText">待命</b></div><div class="eventTitle" id="eventTitle">夜场事件 · 准备中</div><div class="eventText" id="eventText">裁判正在检查六张赌桌，先熟悉中央区域。</div></div>
+  <div id="missionPanel" class="glass">
+    <div class="missionTop"><span class="missionKicker">当前行动</span><span id="phaseBadge">探索阶段</span></div>
+    <h3 id="missionTitle">寻找赌桌或隐藏宝物</h3>
+    <p id="missionHint">先熟悉夜场，再决定是冒险对局、交易，还是寻找安全离场条件。</p>
+    <div class="missionTarget"><span>附近目标</span><strong id="nearbyObjective">正在扫描</strong></div>
+     <div class="missionMetrics"><div class="missionMetric"><span>案件完成</span><b id="treasureProgress">0 / 3</b></div><div class="missionMetric"><span>区域探索</span><b id="zoneProgress">0 / 4</b></div></div>
+    <div id="missionBar"><div id="missionBarFill"></div></div>
+  </div>
+  <div id="activityFeed" class="glass"><div>系统：夜场已开放</div><div>提示：走到赌桌旁按 E 开始匹配</div></div>
+  <div id="miniMapWrap"><canvas id="miniMap" width="268" height="268"></canvas></div>
+  <div id="bigMapModal" class="modal"><div id="bigMapBox" class="modalBox glass">
+    <div class="modalTop"><div><div class="eyebrow">VENUE MASTER MAP · LIVE POSITION</div><h2>星牌夜场全域地图</h2><div class="hint">显示道路、建筑轮廓、功能区、牌桌、宝物、人机和你的朝向。地图会随移动实时更新。</div></div><button class="iconBtn" id="closeBigMapBtn">×</button></div>
+    <canvas id="bigMap" width="1100" height="760"></canvas>
+    <div id="bigMapLegend"><span><i class="player"></i>你的位置</span><span><i class="building"></i>建筑与入口</span><span><i class="zone"></i>功能区</span><span><i class="table"></i>牌桌/游戏桌</span><span><i class="loot"></i>隐藏宝物</span></div>
+  </div></div>
+  <div id="interaction" class="hud glass"></div>
+  <div id="toast"></div>
+  <div id="prisonOverlay"><span id="prisonText">警戒状态：你正在无限监狱中</span><button id="prisonRescueBtn">支付 300 金币赎回</button></div>
+  <div id="mobileControls"><div id="joystick" aria-label="移动遥感"><div class="joystickRing"></div><div id="stick"></div></div><div id="mobilePad"><button id="mobileSprint">冲刺</button><button id="mobileJump">跳跃</button><button id="mobileCamera">第一人称</button><button id="mobileAction">行动</button></div></div>
+
+  <div id="challenge">
+    <div id="challengeBox" class="glass">
+      <div class="eyebrow">REFEREE TABLE · STAR DUEL</div>
+      <h2 id="opponentName">等待对局</h2>
+      <p>两名角色必须站到同一张赌桌两侧，由裁判倒计时后同时出拳。胜者从败者处夺取一颗星。</p>
+      <div id="tableStatus">裁判正在检查赌桌</div><div id="duelCountdown">出牌阶段剩余 05:00</div>
+      <div id="handHint" class="hint" style="margin:8px 0 11px;color:var(--gold);">你的当前手牌：等待裁判发牌</div>
+      <div id="rpsButtons">
+        <button data-move="rock"><span class="emoji">✊</span>石头</button>
+        <button data-move="paper"><span class="emoji">✋</span>布</button>
+        <button data-move="scissors"><span class="emoji">✌️</span>剪刀</button>
+      </div>
+      <div id="challengeResult"></div>
+      <div id="relationshipActions"><button id="allyBtn">提出结盟</button><button id="betrayBtn">背叛关系</button></div>
+      <div id="tradeActions"><button id="tradeBtn">提出交易</button></div>
+      <div id="tradePanel" style="display:none"><div class="tradeHint">可与这名玩家交换金币、星星和宝物估值。对方确认后才会执行。</div><div id="tradeInputs"><input id="offerCoins" type="number" min="0" placeholder="我给金币"><input id="requestCoins" type="number" min="0" placeholder="我收金币"><input id="offerStars" type="number" min="0" placeholder="我给星星"><input id="requestStars" type="number" min="0" placeholder="我收星星"><input id="offerTreasure" type="number" min="0" placeholder="我给宝物值"><input id="requestTreasure" type="number" min="0" placeholder="我收宝物值"></div><button id="sendTradeBtn">发送交易申请</button></div>
+      <div id="tradeOfferPanel" style="display:none"><div class="tradeHint" id="tradeOfferText"></div><button id="acceptTradeBtn">接受交易</button><button id="rejectTradeBtn">拒绝</button></div>
+      <div id="duelChatPanel"><div id="duelChatLog"></div><div id="duelChatComposer"><input id="duelChatInput" maxlength="120" placeholder="仅对手可见，输入消息…"><button id="sendChatBtn">发送</button></div><div id="voiceRow"><button id="voiceBtn">开启语音</button><span id="voiceStatus">仅限本桌两名玩家</span></div></div>
+      <button id="closeChallenge">离开赌桌</button>
+      </div>
+   </div>
+  <div id="tableConsent" class="modal">
+    <div id="tableConsentBox" class="modalBox glass">
+      <div class="eyebrow">REFEREE CHECK · TABLE CONSENT</div>
+      <h2>确认进入赌桌</h2>
+      <div id="tableConsentName">等待对手</div>
+      <div id="tableConsentStatus">双方点击同意后，裁判才会正式开局</div>
+      <div id="tableConsentActions"><button id="tableConsentAgree">同意入桌</button><button id="tableConsentReject">拒绝</button></div>
+    </div>
+  </div>
+  <div id="meetingModal" class="modal">
+    <div id="meetingBox" class="modalBox glass">
+      <div class="modalTop"><div><div class="eyebrow">DISCUSSION ROOM · PRIVATE CHANNEL</div><h2 id="meetingTitle">讨论室</h2><div id="meetingRoomName">等待进入讨论室</div></div><button class="iconBtn" id="closeMeetingBtn">×</button></div>
+      <div id="meetingIntro"></div>
+      <div id="meetingProgress">讨论阶段 · 自由交流</div>
+      <h3 id="meetingClueTitle">线索</h3><div id="meetingClueText"></div>
+      <div id="meetingOptions"></div>
+      <div id="meetingResult"></div>
+      <div id="meetingVoiceRow"><button id="meetingVoiceBtn">开启讨论语音</button><span id="meetingVoiceStatus">讨论室语音未开启</span></div>
+    </div>
+  </div>
+
+  <div id="parkGameModal" class="modal"><div id="parkGameBox" class="modalBox glass"><div class="modalTop"><div><div class="eyebrow">AMUSEMENT PARK · MINI GAME</div><h2 id="parkGameTitle">游乐园游戏桌</h2></div><button class="iconBtn" id="closeParkGameBtn">×</button></div><p id="parkGameDescription"></p><div id="parkGameResult"></div><div class="parkGameInstruction" id="parkGameInstruction"></div><canvas id="parkGameCanvas" width="900" height="560" aria-label="游乐园互动游戏画面"></canvas><div id="parkGameControls"><button data-maze-dir="up">▲</button><button data-maze-dir="left">◀</button><button data-maze-dir="down">▼</button><button data-maze-dir="right">▶</button></div><div id="parkGameBoard" aria-label="五子棋棋盘"></div><button id="parkGameAction">开始游戏</button></div></div>
+
+  <div id="shopModal" class="modal"><div class="modalBox glass">
+    <div class="modalTop"><div><div class="eyebrow">NIGHT MARKET</div><h2>黑市商店</h2><div class="hint">全部物品只使用虚拟金币。商店商品会改变玩法，不涉及真实货币和提现。</div></div><button class="iconBtn" data-close="shopModal">×</button></div>
+    <div class="wallet">当前金币：<span id="shopCoins">120</span></div>
+    <div id="treasureInventory"><b>随身宝物</b><div id="treasureList">正在读取宝物……</div></div>
+    <div class="shopGrid">
+      <div class="shopItem"><h3>幸运护符</h3><p>下一次失败时抵消一次星星损失。</p><span class="price">60 金币</span><button data-item="luck">购买</button></div>
+      <div class="shopItem"><h3>霓虹外套</h3><p>改变角色外观并提高夜场辨识度。</p><span class="price">100 金币</span><button data-item="skin">购买</button></div>
+      <div class="shopItem"><h3>星星补给</h3><p>立即补回一颗星，最多不超过六颗。</p><span class="price">80 金币</span><button data-item="star">购买</button></div>
+      <div class="shopItem"><h3>监狱通行证</h3><p>下一次被捕时自动减免一次惩罚，但不能解除无限关押。</p><span class="price">150 金币</span><button data-item="jailPass">购买</button></div>
+      <div class="shopItem"><h3>影响力徽章</h3><p>下次和 NPC 结盟时增加成功率。</p><span class="price">120 金币</span><button data-item="influence">购买</button></div>
+      <div class="shopItem"><h3>伪装芯片</h3><p>短时间隐藏你的身份标签，适合背叛后撤离。</p><span class="price">180 金币</span><button data-item="disguise">购买</button></div>
+      <div class="shopItem"><h3>星星兑换</h3><p>出售 1 颗星，获得 120 金币。至少保留 1 颗星。</p><span class="price">出售 1 星 · +120 金币</span><button id="sellStarBtn">出售星星</button></div>
+    </div>
+  </div></div>
+
+  <div id="taskModal" class="modal"><div class="modalBox glass">
+     <div class="modalTop"><div><div class="eyebrow">EVIDENCE CONTRACTS</div><h2>推理案件</h2><div class="hint">宝物和签到只是资源来源。真正的案件奖励必须在推理社完成多阶段线索推理，答错会损失金币，同一案件只能领取一次奖励。</div></div><button class="iconBtn" data-close="taskModal">×</button></div>
+    <div id="taskGrid" class="taskGrid"></div><div id="taskLog"></div>
+  </div></div>
+
+  <div id="loanModal" class="modal"><div class="modalBox glass">
+    <div class="modalTop"><div><div class="eyebrow">UNDERGROUND BANK</div><h2>地下借贷</h2><div class="hint">借入 200 金币，需要在 90 秒内偿还 260 金币。逾期会被裁判押入监狱。</div></div><button class="iconBtn" data-close="loanModal">×</button></div>
+    <div class="wallet">当前债务：<span id="loanDebt">0</span> 金币</div>
+    <div class="formRow"><button id="borrowBtn">借入 200 金币</button><button id="repayBtn">偿还债务</button></div>
+    <div id="loanLog" class="hint"></div><div id="riskNotice">借贷会制造风险，但不会扣除真实财产。你可以靠对局、签到和任务赚取金币。</div>
+  </div></div>
+
+  <div id="rescueModal" class="modal"><div class="modalBox glass">
+    <div class="modalTop"><div><div class="eyebrow">RESCUE CONTRACT</div><h2>救援名单</h2><div class="hint">支付 300 虚拟金币，可把一名玩家或人机从无限监狱中赎回，并恢复 1 颗星。</div></div><button class="iconBtn" data-close="rescueModal">×</button></div>
+    <div id="rescueList" class="taskGrid"></div><div id="rescueLog" class="hint" style="margin-top:10px;"></div>
+  </div></div>
+
+  <div id="lobbyModal" class="modal"><div class="modalBox glass">
+    <div class="modalTop"><div><div class="eyebrow">ONLINE LOBBY · MAX 8</div><h2>联机大厅</h2><div class="hint">手机和电脑打开同一个地址即可联机。房间最多 8 名真人，空缺位置由本地人机补全。</div></div><button class="iconBtn" data-close="lobbyModal">×</button></div>
+     <div class="formRow"><input id="playerNameInput" maxlength="12" placeholder="你的昵称" value="玩家"><input id="roomCodeInput" maxlength="6" placeholder="房间码，例如 STAR1" value="STAR1"></div>
+    <button id="connectBtn">连接房间</button><button id="disconnectBtn" style="display:none;background:transparent;color:var(--muted);">断开连接</button>
+    <div id="onlineLog"></div><div id="musicStatus">首次触摸或点击后播放原创夜场氛围音乐 · 也可选择本地授权音频</div><button id="musicFileBtn">选择本地授权音频</button><input id="musicFileInput" type="file" accept="audio/*" hidden><div id="lobbyPlayers"></div>
+  </div></div>
+
+  <div id="gameOver"><div class="glass"><h2>星星归零</h2><p>你已经被裁判登记为淘汰。重新开始会生成新的本地角色状态；如果你在监狱中，也可以支付赎金继续这局。</p><button id="restart">重新开始</button></div></div>
+  <script type="module" src="./client.mjs?v=20260812-sprint-sky-music3"></script>
+  <script>
+    (() => {
+      const enter = (mode) => {
+        document.getElementById('loadingScreen')?.classList.add('hidden');
+        document.getElementById('startScreen')?.classList.remove('open');
+        if (mode === 'online') document.getElementById('lobbyModal')?.classList.add('open');
+      };
+      document.getElementById('startSingleBtn')?.addEventListener('click', () => enter('single'));
+      document.getElementById('startOnlineBtn')?.addEventListener('click', () => enter('online'));
+      window.setTimeout(() => document.getElementById('loadingScreen')?.classList.add('hidden'), 2200);
+    })();
+  </script>
+</body>
+</html>
