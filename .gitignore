@@ -1,0 +1,25 @@
+# Browser/runtime inspection artifacts
+_*/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# Local logs and reports
+*.log
+*.tmp
+*.bak
+
+# Local environment and dependencies
+.env
+node_modules/
+
+# OS/editor files
+Thumbs.db
+.DS_Store
+.vscode/
+
+# Local launch helpers are useful on Windows but not part of the cloud image
+启动游戏.cmd
+启动游戏.ps1
